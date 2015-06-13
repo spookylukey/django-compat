@@ -23,6 +23,7 @@ def setup():
 
     INSTALLED_APPS = [
         'compat',
+        'compat.tests',
     ]
     if django.VERSION >= (1,6):
         TEST_RUNNER = 'django.test.runner.DiscoverRunner'

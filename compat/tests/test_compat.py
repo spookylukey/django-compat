@@ -8,7 +8,7 @@ from compat import six
 
 import compat
 
-from .models import UnimportantThing
+from .models import UnimportantThing, House, Room, NewHouse, NewRoom
 
 class CompatTests(TestCase):
 
@@ -119,3 +119,58 @@ class CompatTests(TestCase):
         """
         with self.assertRaises(NoReverseMatch):
             resolve_url(lambda: 'asdf')
+
+    def _test_get_query_set_setup(self, model):
+        house1 = model.objects.create(name="My house")
+        house1.rooms.create(name="Living room", downstairs=True)
+        house1.rooms.create(name="Bed room", downstairs=False)
+
+        house2 = model.objects.create(name="Your house")
+        house2.rooms.create(name="Dining room", downstairs=True)
+        house2.rooms.create(name="Attic", downstairs=False)
+        return house1, house2
+
+    def test_get_query_set_with_custom_manager_method(self):
+        """
+        Test for compat with code using get_query_set - check that
+        custom manager.get_query_set is included.
+        """
+        # Related managers (which derive automatically from the model's
+        # default manager) are examples of subclasses of a manager.
+        # There are others, but this is a common case.
+        self._test_get_query_set_setup(House)
+
+        with self.assertNumQueries(1):
+            rooms = Room.objects.all()
+            houses = [room.house for room in rooms]
+
+    def test_get_query_set_with_subclass(self):
+        """
+        Test for compat with code using get_query_set - check that
+        subclasses include super class methods correctly
+        """
+        house1, house2 = self._test_get_query_set_setup(House)
+
+        self.assertEqual([r.name for r in house1.rooms.downstairs()],
+                         ['Living room'])
+
+    def test_get_queryset_with_custom_manager_method(self):
+        """
+        Test for compat with code using get_query_set - check that
+        custom manager.get_query_set is included.
+        """
+        self._test_get_query_set_setup(NewHouse)
+
+        with self.assertNumQueries(1):
+            rooms = Room.objects.all()
+            houses = [room.house for room in rooms]
+
+    def test_get_queryset_with_subclass(self):
+        """
+        Test for compat with code using get_queryset - check that
+        subclasses include super class methods correctly
+        """
+        house1, house2 = self._test_get_query_set_setup(NewHouse)
+
+        self.assertEqual([r.name for r in house1.rooms.downstairs()],
+                         ['Living room'])
